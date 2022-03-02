@@ -1,11 +1,58 @@
 ﻿using System;
+using System.Threading;
 using UnityEngine;
 
-public class OurGl
+public static class OurGl
 {
     private const float Depth = 255f;
     private static readonly int Width = (int)ApptimeScreen.GetScreenSize().x;
     private static readonly int Height = (int)ApptimeScreen.GetScreenSize().y;
+    
+    private static Vector3 Barycentric(Vector2 A, Vector2 B, Vector2 C, Vector2 P)
+    {
+        Vector3 vecX = new Vector3(C.x - A.x, B.x - A.x, A.x - P.x);
+        Vector3 vecY = new Vector3(C.y - A.y, B.y - A.y, A.y - P.y);
+        Vector3 u = Vector3.Cross(vecX, vecY);
+        if (Math.Abs(u.z)>1e-2) 
+            return new Vector3(1-(u.x+u.y)/(u.z+1), u.y/(u.z+1), u.x/(u.z+1));
+        return new Vector3(-1,1,1);
+    }
+    public static int[] Triangle(Vector4[] pts, IShader shader,  int[] zBuffer)
+    {
+        Vector2 boxMin = new Vector2( float.MaxValue,  float.MaxValue);
+        Vector2 boxMax = new Vector2( - float.MaxValue, - float.MaxValue);
+        for (int i=0; i<3; i++) {
+            boxMin.x = Math.Max(0, Math.Min(boxMin.x, pts[i].x ));
+            boxMin.y = Math.Max(0, Math.Min(boxMin.y, pts[i].y ));
+            boxMax.x = Math.Min(Width-1,Math.Max(boxMax.x, pts[i].x ));
+            boxMax.y = Math.Min(Height-1,Math.Max(boxMax.x, pts[i].y ));
+        }
+        Vector2 P;
+        Color color;
+        float fragDepth;
+        Vector3 bcClip;
+        for (P.x=(int)boxMin.x; P.x<=(int)boxMax.x; P.x++) {
+            for (P.y=(int)boxMin.y; P.y<=(int)boxMax.y; P.y++) {
+                Vector3 bcScreen = Barycentric(
+                    new Vector2((int)pts[0].x,(int)pts[0].y),
+                    new Vector2((int)pts[1].x,(int)pts[1].y),
+                    new Vector2((int)pts[2].x,(int)pts[2].y),
+                    P);
+                if (bcScreen.x<0 || bcScreen.y<0 || bcScreen.z<0) continue;
+                bcClip = new Vector3(bcScreen.x / pts[0].w, bcScreen.y / pts[1].w, bcScreen.z / pts[2].w);
+                bcClip = bcClip * 1 / (bcClip.x + bcClip.y + bcClip.z);
+                fragDepth = bcClip.x * shader.VaryingTri.m20 + bcClip.y * shader.VaryingTri.m21 + bcClip.z  * shader.VaryingTri.m22;
+                var zBufferIndex = (int)P.x + (int)P.y * Width;
+                if (zBuffer[zBufferIndex] >= (int)fragDepth) continue;
+                zBuffer[zBufferIndex] = (int)fragDepth;
+                color = shader.Fragment(bcClip);
+                ApptimeScreen.SetPixel((int)P.x, (int)P.y, color); 
+            }
+        }
+        return zBuffer;
+    }
+    
+    //old Triangle
     public static void PaintTriangle(Texture2D texture, Vector3[] v, Vector2[] uv, float[] ity, int[] zBuffer)
     {
         v[0] = new Vector3((int)v[0].x, (int)v[0].y, (int)v[0].z);
@@ -80,11 +127,11 @@ public class OurGl
         
         return minv*Tr;
     }
-    public static Vector3 M2v(Matrix4x4 m)
+    public static Vector4 M2v(Matrix4x4 m)
     {
-        return new Vector3(m.m00 / m.m30, m.m10 / m.m30, m.m20 / m.m30);
+        return new Vector4(m.m00 / m.m30, m.m10 / m.m30, m.m20 / m.m30, m.m30);
     }
-    public static  Matrix4x4 V2m(Vector3 v)
+    public static  Matrix4x4 V2m(Vector4 v)
     {
         Matrix4x4 m = Matrix4x4.zero;
         m.m00 = v.x;
@@ -105,7 +152,7 @@ public class OurGl
         m.m22 = Depth/2f;
         return m;
     }
-    private void PaintLine(int x0, int y0, int x1, int y1, Color color)
+    private static void PaintLine(int x0, int y0, int x1, int y1, Color color)
     {
         bool isSteeping = false;
         if (Math.Abs(x0 - x1) < Math.Abs(y0 - y1))

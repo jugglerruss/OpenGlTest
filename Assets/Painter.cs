@@ -77,16 +77,16 @@ public class Painter : MonoBehaviour
         _isReading = false;
         _isReady = false;
         _timeStart = (int)(Time.realtimeSinceStartup * 60);
-        Debug.Log("_timeStart " + _timeStart);
+       // Debug.Log("_timeStart " + _timeStart);
         ApptimeScreen.Clear();
         var timeClear = (int)(Time.realtimeSinceStartup * 60);
-        Debug.Log("timeClear " + (timeClear-_timeStart));
+       // Debug.Log("timeClear " + (timeClear-_timeStart));
         PaintObject();
         var timeAfterPaintObject = (int)(Time.realtimeSinceStartup * 60);
-        Debug.Log("timeAfterPaintObject " + (timeAfterPaintObject-timeClear));
+       // Debug.Log("timeAfterPaintObject " + (timeAfterPaintObject-timeClear));
         ApptimeScreen.ApplyPixelChanges();
         _timeApplyPixelChanges = (int)(Time.realtimeSinceStartup * 60);
-        Debug.Log("timeApplyPixelChanges " + (_timeApplyPixelChanges-timeAfterPaintObject));
+      // Debug.Log("timeApplyPixelChanges " + (_timeApplyPixelChanges-timeAfterPaintObject));
         _isReady = true;
     }
     private void PaintObject()
@@ -101,33 +101,21 @@ public class Painter : MonoBehaviour
         {
             _zBuffer[i] = int.MinValue;
         }
-        GouraudShader shader = new GouraudShader(_fileReader, viewPort,projection,_modelView,lightDir);
-        foreach (var verticesIndex in _fileReader.FacetsList)
+        for (var i=0; i < _fileReader.FacetsList.Count; i++)
         {
-            float[] intensity = new float[3];
-            Vector3[] screenCoords  = new Vector3[3];
-            Vector3[] worldCoords   = new Vector3[3];
-            Vector2[] textureCoords = new Vector2[3];
-            for (int i = 0; i < 3; i++)
+            Vector4[] screenCoords  = new Vector4[3];
+            GouraudShader shader = new GouraudShader(_fileReader, z,lightDir, _texture);
+            for (int j = 0; j < 3; j++)
             {
-                var k = i * 3;
-                worldCoords[i] = new Vector3(
-                    _fileReader.VerticesList[verticesIndex[k]][0], 
-                    _fileReader.VerticesList[verticesIndex[k]][1], 
-                    _fileReader.VerticesList[verticesIndex[k]][2]);
-                screenCoords[i] = OurGl.M2v(z * OurGl.V2m(worldCoords[i]));
-                textureCoords[i] =  new Vector2(
-                    (int)(_fileReader.TextureVerticesList[verticesIndex[k + 1]][0] * _texture.width),
-                    (int)(_fileReader.TextureVerticesList[verticesIndex[k + 1]][1] * _texture.height));
-                Vector3 ityVector = new Vector3(
-                    _fileReader.NormalesList[verticesIndex[k + 2]][0],
-                    _fileReader.NormalesList[verticesIndex[k + 2]][1],
-                    _fileReader.NormalesList[verticesIndex[k + 2]][2]).normalized;
-                intensity[i] = ityVector.x * lightDir.x +
-                               ityVector.y * lightDir.y +
-                               ityVector.z * lightDir.z;
+                var k = j * 3;
+                shader.Vertex(_fileReader.FacetsList[i][k],_fileReader.FacetsList[i][k+1],_fileReader.FacetsList[i][k+2], j);
             }
-            OurGl.PaintTriangle(_texture, screenCoords, textureCoords, intensity, _zBuffer);
+            
+            for (int j = 0; j < 3; j++)
+            {
+                screenCoords[j] = shader.VaryingTri.GetColumn(j);
+            }
+            _zBuffer = OurGl.Triangle(screenCoords, shader, _zBuffer);
         }
     }
     
