@@ -115,7 +115,7 @@ public class Painter : MonoBehaviour
             {
                 screenCoords[j] = shader.VaryingTri.GetColumn(j);
             }
-            _zBuffer = OurGl.Triangle(screenCoords, shader, _zBuffer);
+            OurGl.Triangle(screenCoords, shader, _zBuffer);
         }
     }
     

@@ -17,7 +17,7 @@ public static class OurGl
             return new Vector3(1-(u.x+u.y)/(u.z+1), u.y/(u.z+1), u.x/(u.z+1));
         return new Vector3(-1,1,1);
     }
-    public static int[] Triangle(Vector4[] pts, IShader shader,  int[] zBuffer)
+    public static void Triangle(Vector4[] pts, IShader shader,  int[] zBuffer)
     {
         Vector2 boxMin = new Vector2( float.MaxValue,  float.MaxValue);
         Vector2 boxMax = new Vector2( - float.MaxValue, - float.MaxValue);
@@ -49,7 +49,6 @@ public static class OurGl
                 ApptimeScreen.SetPixel((int)P.x, (int)P.y, color); 
             }
         }
-        return zBuffer;
     }
     
     //old Triangle

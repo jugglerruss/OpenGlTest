@@ -32,7 +32,6 @@ public struct GouraudShader : IShader
         _varyingUv = SetColumn(_varyingUv, nthVert,  new Vector4(_model.TextureVerticesList[textureIndex][0] * _texture.width,_model.TextureVerticesList[textureIndex][1] * _texture.height));
         if (nthVert == 2 && ity != 0)
         {
-            Vector4 shuffle;
             if (VaryingTri.m10 > VaryingTri.m11)
             {
                 VaryingTri = ChangeColumn(VaryingTri, 0, 1);

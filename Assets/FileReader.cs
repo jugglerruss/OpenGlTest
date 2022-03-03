@@ -44,152 +44,43 @@ public class FileReader : ScriptableObject
         {
             if (line.Length == 0)
                 continue;
-            if (GetVertices())
+            if (GetData(line,"v ", ' ', VerticesList))
                 continue;
-            if (GetNormales())
+            if (GetData(line,"vt  ", ' ', TextureVerticesList))
                 continue;
-            if (GetTextureVertices())
+            if (GetData(line,"vn  ", ' ', NormalesList))
                 continue;
-            GetFaces();
-            
-            bool GetVertices()
-            {
-                if (line[0] == 'v' && line[1] == ' ')
-                {
-                    var spaceIndex = 0;
-                    string[] verticesString = new string[3];
-                    float[] verticesFloat = new float[3];
-                    List<char>[] chars = new List<char>[3];
-                    foreach (var word in line)
-                    {
-                        if (word == 'v')
-                            continue;
-                        if (word == ' ')
-                        {
-                            spaceIndex++;
-                            chars[spaceIndex - 1] = new List<char>();
-                        }
-                        chars[spaceIndex - 1].Add(word);
-                    }
-                    for (int i = 0; i < verticesString.Length; i++)
-                    {
-                        verticesString[i] = new String(chars[i].ToArray());
-                        verticesFloat[i] = float.Parse(verticesString[i], System.Globalization.CultureInfo.InvariantCulture);
-                    }
-                    VerticesList.Add(new float[] { verticesFloat[0], verticesFloat[1], verticesFloat[2] });
-                    return true;
-                }
-                return false;
-            }
-            bool GetNormales()
-            {
-                if (line[0] == 'v' && line[1] == 'n')
-                {
-                    var spaceIndex = 0;
-                    string[] verticesString = new string[3];
-                    float[] verticesFloat = new float[3];
-                    List<char>[] chars = new List<char>[3];
-                    foreach (var word in line)
-                    {
-                        if (word == 'v' || word == 'n')
-                            continue;
-                        if (word == ' ')
-                        {
-                            if( spaceIndex - 1 == 0 && chars[spaceIndex - 1].Count == 0)
-                                continue;
-                            spaceIndex++;
-                            chars[spaceIndex - 1] = new List<char>();
-                            continue;
-                        }
-                        chars[spaceIndex - 1].Add(word);
-                    }
-                    for (int i = 0; i < verticesString.Length; i++)
-                    {
-                        verticesString[i] = new String(chars[i].ToArray());
-                        verticesFloat[i] = float.Parse(verticesString[i], System.Globalization.CultureInfo.InvariantCulture);
-                    }
-                    NormalesList.Add(new float[] { verticesFloat[0], verticesFloat[1], verticesFloat[2] });
-                    return true;
-                }
-                return false;
-            }
-            bool GetTextureVertices()
-            {
-                if (line[0] == 'v' && line[1] == 't')
-                {
-                    var spaceIndex = 0;
-                    string[] verticesString = new string[3];
-                    float[] verticesFloat = new float[3];
-                    List<char>[] chars = new List<char>[3];
-                    foreach (var word in line)
-                    {
-                        if (word == 'v' || word == 't')
-                            continue;
-                        if (word == ' ')
-                        {
-                            if( spaceIndex - 1 == 0 && chars[spaceIndex - 1].Count == 0)
-                                continue;
-                            spaceIndex++;
-                            chars[spaceIndex - 1] = new List<char>();
-                            continue;
-                        }
-                        chars[spaceIndex - 1].Add(word);
-                    }
-                    for (int i = 0; i < verticesString.Length; i++)
-                    {
-                        verticesString[i] = new String(chars[i].ToArray());
-                        verticesFloat[i] = float.Parse(verticesString[i], System.Globalization.CultureInfo.InvariantCulture);
-                    }
-                    TextureVerticesList.Add(new float[] { verticesFloat[0], verticesFloat[1], verticesFloat[2] });
-                    return true;
-                }
-                return false;
-            }
-
-            void GetFaces()
-            {
-                if (line[0] == 'f' && line[1] == ' ')
-                {
-                    var spaceIndex = 0;
-                    var slashIndex = 1;
-                    string facetsString;
-                    List<int> facetsInt = new List<int>();
-                    List<char>[][] chars = new List<char>[3][];
-                    foreach (var word in line)
-                    {
-                        if (word == 'f')
-                            continue;
-                        if (word == ' ')
-                        {
-                            spaceIndex++;
-                            slashIndex = 1;
-                            chars[spaceIndex - 1] = new List<char>[3];
-                            chars[spaceIndex - 1][slashIndex - 1] = new List<char>();
-                        }
-                        else if (word == '/')
-                        {
-                            slashIndex++;
-                            chars[spaceIndex - 1][slashIndex - 1] = new List<char>();
-                        }
-                        else
-                        {
-                            chars[spaceIndex - 1][slashIndex - 1].Add(word);
-                        }
-                    }
-                    for (int i = 0; i < 3; i++)
-                    {
-                        for (int j = 0; j < 3; j++)
-                        {
-                            var charsToString = chars[i][j].ToArray();
-                            facetsString = new String(charsToString);
-                            facetsInt.Add(int.Parse(facetsString));
-                        }
-                    }
-                    FacetsList.Add(facetsInt.ToArray());
-                    return;
-                }
-            }
+            GetData(line, "f ", '/', FacetsList);
         }
         OnFileRead?.Invoke();
+    }
+    bool GetData(string line,string startString, char splitChar, List<float[]> resultList)
+    {
+        if (!line.StartsWith(startString)) return false;
+        float[] verticesFloat = new float[3];
+        var splitLine = line.Substring(startString.Length).Split(splitChar);
+        int i = 0;
+        foreach (var word in splitLine)
+        {
+            verticesFloat[i] = float.Parse(word, System.Globalization.CultureInfo.InvariantCulture);
+            i++;
+        }
+        resultList.Add(new [] { verticesFloat[0], verticesFloat[1], verticesFloat[2] });
+        return true;
+    } 
+    bool GetData(string line,string startString, char splitChar, List<int[]> resultList)
+    {
+        if (!line.StartsWith(startString)) return false;
+        List<int> facetsInt = new List<int>();
+        var splitLine = line.Substring(startString.Length).Split();
+        foreach (var stringWhithSlashes in splitLine)
+        {
+            foreach (var word in stringWhithSlashes.Split(splitChar))
+            {
+                facetsInt.Add(int.Parse(word));
+            }
+        }
+        resultList.Add(facetsInt.ToArray());
+        return true;
     }
 }
