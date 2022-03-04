@@ -6,7 +6,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "FileReader", menuName = "ScriptableObjects/FileReader", order = 1) ]
 public class FileReader : ScriptableObject
 {
-    [SerializeField] private string _fileName= "/african_head.obj";
+    [SerializeField] private string _fileName;
     private List<string> _textLines = new List<string>();
     public List<float[]> VerticesList { get; private set; }
     public List<float[]> TextureVerticesList { get; private set; }

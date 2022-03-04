@@ -14,18 +14,23 @@ public static class OurGl
         Vector3 vecY = new Vector3(C.y - A.y, B.y - A.y, A.y - P.y);
         Vector3 u = Vector3.Cross(vecX, vecY);
         if (Math.Abs(u.z)>1e-2) 
-            return new Vector3(1-(u.x+u.y)/(u.z+1), u.y/(u.z+1), u.x/(u.z+1));
+            return new Vector3(1-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z);
         return new Vector3(-1,1,1);
     }
-    public static void Triangle(Vector4[] pts, IShader shader,  int[] zBuffer)
+    public static void Triangle(Vector4[] pts, IShader shader,  int[] zBuffer, Color[] colorBuffer)
     {
         Vector2 boxMin = new Vector2( float.MaxValue,  float.MaxValue);
         Vector2 boxMax = new Vector2( - float.MaxValue, - float.MaxValue);
+        Vector2[] pts2 = new Vector2[3];
+        for (int i = 0; i < 3; i++)
+        {
+           pts2[i] = new Vector2( (int)(pts[i].x / pts[i].w),  (int)(pts[i].y / pts[i].w) );
+        }
         for (int i=0; i<3; i++) {
-            boxMin.x = Math.Max(0, Math.Min(boxMin.x, pts[i].x ));
-            boxMin.y = Math.Max(0, Math.Min(boxMin.y, pts[i].y ));
-            boxMax.x = Math.Min(Width-1,Math.Max(boxMax.x, pts[i].x ));
-            boxMax.y = Math.Min(Height-1,Math.Max(boxMax.x, pts[i].y ));
+            boxMin.x = Math.Max(0, Math.Min(boxMin.x, pts2[i].x));
+            boxMin.y = Math.Max(0, Math.Min(boxMin.y, pts2[i].y));
+            boxMax.x = Math.Min(Width-1,Math.Max(boxMax.x, pts2[i].x));
+            boxMax.y = Math.Min(Height-1,Math.Max(boxMax.y, pts2[i].y));
         }
         Vector2 P;
         Color color;
@@ -33,20 +38,17 @@ public static class OurGl
         Vector3 bcClip;
         for (P.x=(int)boxMin.x; P.x<=(int)boxMax.x; P.x++) {
             for (P.y=(int)boxMin.y; P.y<=(int)boxMax.y; P.y++) {
-                Vector3 bcScreen = Barycentric(
-                    new Vector2((int)pts[0].x,(int)pts[0].y),
-                    new Vector2((int)pts[1].x,(int)pts[1].y),
-                    new Vector2((int)pts[2].x,(int)pts[2].y),
-                    P);
+                Vector3 bcScreen = Barycentric(pts2[0],pts2[1],pts2[2],P);
                 if (bcScreen.x<0 || bcScreen.y<0 || bcScreen.z<0) continue;
                 bcClip = new Vector3(bcScreen.x / pts[0].w, bcScreen.y / pts[1].w, bcScreen.z / pts[2].w);
-                bcClip = bcClip * 1 / (bcClip.x + bcClip.y + bcClip.z);
-                fragDepth = bcClip.x * shader.VaryingTri.m20 + bcClip.y * shader.VaryingTri.m21 + bcClip.z  * shader.VaryingTri.m22;
+                bcClip /= (bcClip.x + bcClip.y + bcClip.z);
+                fragDepth = bcClip.x * pts[0].z + bcClip.y * pts[1].z + bcClip.z  * pts[2].z;
                 var zBufferIndex = (int)P.x + (int)P.y * Width;
                 if (zBuffer[zBufferIndex] >= (int)fragDepth) continue;
                 zBuffer[zBufferIndex] = (int)fragDepth;
                 color = shader.Fragment(bcClip);
-                ApptimeScreen.SetPixel((int)P.x, (int)P.y, color); 
+                colorBuffer[zBufferIndex] = color;
+                //ApptimeScreen.SetPixel((int)P.x, (int)P.y, color); 
             }
         }
     }
@@ -136,7 +138,7 @@ public static class OurGl
         m.m00 = v.x;
         m.m10 = v.y;
         m.m20 = v.z;
-        m.m30 = 1f;
+        m.m30 = v.w == 0 ? 1f : v.w;
         return m;
     }
     public static Matrix4x4 Viewport(int x, int y, int w, int h)

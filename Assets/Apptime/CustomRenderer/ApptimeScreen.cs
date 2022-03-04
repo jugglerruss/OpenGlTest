@@ -31,6 +31,12 @@ public class ApptimeScreen : MonoBehaviour {
     public static void SetPixel(int x, int y, Color color) {
         _instance._tex.SetPixel(x, y, color);
     }
+    public static void SetPixels(int x, int y,int width, int height, Color[] colors) {
+        _instance._tex.SetPixels(x, y, width, height, colors);
+    }
+    public static void SetPixelsSimple(Color[] colors) {
+        _instance._tex.SetPixels(colors);
+    }
 
     public static void ApplyPixelChanges() {
         _instance._tex.Apply();
